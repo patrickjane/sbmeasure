@@ -41,8 +41,11 @@ SOFTWARE.
 // customization
 // **************************************************************************************
 
-#define ENGLISH    0   // default language: german
-#define USE_EEPROM 0   // write/load from eeprom
+//#define ENGLISH
+#define GERMAN
+
+#define USE_EEPROM      // comment out/remove to disable eeprom access 
+#define SHIELD_TYPE 0   // 0: "DFRobot SKU: DFR0009" 1: "Velleman VMA203 shield"
 
 // **************************************************************************************
 // definitions
@@ -92,8 +95,13 @@ SOFTWARE.
 #define BUTTON_DEBOUNCE_INTERVAL 50
 #define DELETE_INTERVAL 1000*5
 
-#define LAUNCHSCREEN_UPPER "SK Messsystem   "
-#define LAUNCHSCREEN_LOWER "v1.0.0          "
+#ifdef ENGLISH
+#  define LAUNCHSCREEN_UPPER "SB Measure      "
+#  define LAUNCHSCREEN_LOWER "v1.0.0          "
+#else
+#  define LAUNCHSCREEN_UPPER "SK Messsystem   "
+#  define LAUNCHSCREEN_LOWER "v1.0.0          "
+#endif
 
 #define DOTCOUNT 12
 
@@ -107,6 +115,30 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 // menus
 // **************************************************************************************
 
+#ifdef ENGLISH
+const char* menuRoot[] =
+{
+  " Measurement   ",
+  " Results       ",
+  " Calibration   ",
+  0
+};
+
+const char* menuMeasure[] = 
+{
+  " Save          ",
+  0
+};
+
+char* menuList[itemcntLIST];
+
+const char* menuCalibrate[] =
+{
+  " Start         ",
+  " Stop          ",
+  0
+};
+#else
 const char* menuRoot[] =
 {
   " Zeitmessung   ",
@@ -115,7 +147,7 @@ const char* menuRoot[] =
   0
 };
 
-const char* menuMeasure[] =
+const char* menuMeasure[] = 
 {
   " Speichern     ",
   0
@@ -129,6 +161,7 @@ const char* menuCalibrate[] =
   " Stop          ",
   0
 };
+#endif
 
 const char* dots[] =
 {
@@ -622,12 +655,21 @@ void printMenu(int contact)
     else if (currentMenu == menuList)
     {
       const char* textLine1= subMenuSelection >= 0 && subMenuSelection < currentMenuItems ? currentMenu[subMenuSelection] : "              ";
-      const char* textLine2= "> Loeschen     ";
+      const char* textLine2= "> Loeschen?    ";
 
+#ifdef ENGLISH
+      textLine2= "> Delete?      ";
+
+      if (deleteConfirms == 1)
+        textLine2= "> Delete?      ";
+      else if (deleteConfirms == 2)
+        textLine2= "> Really?      ";
+#else
       if (deleteConfirms == 1)
         textLine2= "> Loeschen?    ";
       else if (deleteConfirms == 2)
         textLine2= "> Wirklich?    ";
+#endif      
 
       char line1[16+1];
 
@@ -643,10 +685,17 @@ void printMenu(int contact)
     }
     else if (currentMenu == menuCalibrate)
     {
+#ifdef ENGLISH
+      lcd.setCursor(0,0);
+      lcd.print("  Calibration   ");
+      lcd.setCursor(0,1);
+      lcd.print(contact ? "  - contact -   " : " - no contact - ");
+#else
       lcd.setCursor(0,0);
       lcd.print("  Kalibrierung  ");
       lcd.setCursor(0,1);
       lcd.print(contact ? "  - Kontakt -   " : "- kein Kontakt -");
+#endif
     }
   }
 }
@@ -756,11 +805,24 @@ int getPressedButton()
   lastButtonState= 0;
 
   if (value > 1000) return btnNONE;
-  if (value < 50)   return btnRIGHT;          // 0
-  if (value < 250 || (value >= 600 && value <= 615))  return btnUP;             // 129-130, 612
-  if (value < 470)  return btnDOWN;           // 306-307, 340, 468
-  if (value < 650)  return btnLEFT;           // 479-480
-  if (value < 850)  return btnSELECT;         // 721 - 723, 747, 730, 728
+
+  if (SHIELD_TYPE == 0)
+  {
+    if (value < 50)   return btnRIGHT;          // 0
+    if (value < 250 || (value >= 600 && value <= 615))  return btnUP;             // 129-130, 612
+    if (value < 470)  return btnDOWN;           // 306-307, 340, 468
+    if (value < 650)  return btnLEFT;           // 479-480
+    if (value < 850)  return btnSELECT;         // 721 - 723, 747, 730, 728
+  }
+
+  if (SHIELD_TYPE == 1)
+  {
+    if (value < 50)   return btnRIGHT;          // 0
+    if (value < 150)  return btnUP;             // 100
+    if (value < 300)  return btnDOWN;           // 256
+    if (value < 500)  return btnLEFT;           // 409
+    if (value < 750)  return btnSELECT;         // 640
+  }
   
   return btnNONE;
 }
@@ -771,6 +833,7 @@ int getPressedButton()
 
 void loadEEPROM()
 {
+#ifdef USE_EEPROM
   int col= 0;
   int line= 0;
   int address = 0;
@@ -792,7 +855,8 @@ void loadEEPROM()
       return;
 
     eepromValue = EEPROM.read(address);
-  }  
+  }
+#endif
 }
 
 // **************************************************************************************
@@ -801,6 +865,7 @@ void loadEEPROM()
 
 void saveEEPROM()
 {
+#ifdef USE_EEPROM
   int address = 0;
   
   for (int i= 0; i < itemcntLIST; i++)
@@ -810,7 +875,8 @@ void saveEEPROM()
 
     for (int k= 0; k < 12; k++, address++)
       EEPROM.write(address, (int)menuList[i][k]);
-  }
+  }  
       
   EEPROM.write(address, 255);
+#endif
 }
